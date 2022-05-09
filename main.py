@@ -104,18 +104,19 @@ def train(epoch):
         if args.loss=='CE':
             loss = criterion(outputs, targets)
             _, predicted = outputs.max(1)
+            total += targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+            acc = 1.0 * correct / total
         else:
-            loss,predicted=loss_fn(outputs, targets,5)
+            loss, acc = loss_fn(outputs, targets, 5)
+            loss = loss.to(device)
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
 
-        total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
-
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f'
+                     % (train_loss/(batch_idx+1), acc))
 
 
 def test(epoch):
@@ -131,18 +132,20 @@ def test(epoch):
             if args.loss == 'CE':
                 loss = criterion(outputs, targets)
                 _, predicted = outputs.max(1)
+                total += targets.size(0)
+                correct += predicted.eq(targets).sum().item()
+                acc_test = 1.0 * correct/total
             else:
-                loss, predicted = loss_fn(outputs, targets, 5)
+                loss, acc_test = loss_fn(outputs, targets, 5)
+                # loss = loss.to(device)
             test_loss += loss.item()
             #_, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
+                         % (test_loss/(batch_idx+1), acc_test))
 
     # Save checkpoint.
-    acc = 100.*correct/total
+    acc = acc_test
     if acc > best_acc:
         print('Saving..')
         state = {
