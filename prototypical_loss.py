@@ -68,34 +68,25 @@ def prototypical_loss(inputs, target, n_support):
 
     prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
     # FIXME when torch will support where as np
-    # temp = list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1), classes))
-    # query_idxs = temp[0]
-    # for i in range(1, len(temp)):
-    #     query_idxs = torch.concat()
-    # pdb.set_trace()
+
     query_idxs = torch.cat(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1), classes)))
     #.view(-1)
     n_query_of_cls = list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1).size()[0], classes))
-    # pdb.set_trace()
     query_samples = input_cpu[query_idxs]
     dists = euclidean_dist(query_samples, prototypes)
-    # n_query = query_samples.size(0)
-
     log_p_y = F.log_softmax(-dists, dim=1)
     # target_inds = torch.arange(0, n_classes)
     # target_inds = target_inds.view(n_classes, 1, 1)
     # target_inds = target_inds.expand(n_classes, n_query, 1).long()
-    target_inds = torch.zeros(sum(n_query_of_cls))
-    n_prev = 0
+    target_inds = torch.zeros(sum(n_query_of_cls), n_classes, dtype=torch.int64)
     for i, n in enumerate(n_query_of_cls):
         curr_i = sum(n_query_of_cls[:i])
         target_inds[curr_i:curr_i+n] = i
         
-    # loss_val = -log_p_y.gather(dim=0, index=target_inds).squeeze().view(-1).mean()
-    
-    loss_val = -log_p_y.mean()
+    loss_val = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
+    # print(loss_val)
     _, y_hat = log_p_y.max(1)
-    acc_val = y_hat.eq(target_inds).float().mean()
-    # print(acc_val)
     # pdb.set_trace()
+    acc_val = y_hat.eq(target_inds[:, 0]).float().mean()
+    
     return loss_val, acc_val#, y_hat
