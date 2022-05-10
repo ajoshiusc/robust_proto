@@ -84,7 +84,8 @@ def prototypical_loss(inputs, target, n_support):
         target_inds[curr_i:curr_i+n] = i
         
     loss_val = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
-    # print(loss_val)
+    
+    # print(dists, loss_val)
     _, y_hat = log_p_y.max(1)
     # pdb.set_trace()
     acc_val = y_hat.eq(target_inds[:, 0]).float().mean()
