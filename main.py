@@ -10,23 +10,41 @@ import torchvision.transforms as transforms
 
 import os
 import argparse
+import pdb
 
 from models import *
 from utils import progress_bar
 from prototypical_loss import prototypical_loss as loss_fn
+from prototypical_batch_sampler import PrototypicalBatchSampler
+
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument("--loss", required=False, default='PRO', choices=['CE', 'PRO'])
-parser.add_argument('--n_support', default=10, type=int, help='learning rate')
+parser.add_argument('--n_support', default=16, type=int, help='learning rate')
+parser.add_argument('--n_query', default=16, type=int, help='learning rate')
 parser.add_argument('--batch_size', default=256, type=int, help='learning rate')
+parser.add_argument('--classes', default=10, type=int, help='learning rate')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+
+def init_sampler(labels, mode, total_len):
+    if 'train' in mode:
+        classes_per_it = args.classes
+        num_samples = args.n_support + args.n_query
+    else:
+        classes_per_it = args.classes
+        num_samples = args.n_support + args.n_query
+
+    return PrototypicalBatchSampler(labels=labels,
+                                    classes_per_it=classes_per_it,
+                                    num_samples=num_samples,
+                                    iterations=int(total_len/num_samples))
 
 # Data
 print('==> Preparing data..')
@@ -44,13 +62,19 @@ transform_test = transforms.Compose([
 
 trainset = torchvision.datasets.CIFAR10(
     root='./data', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(
-    trainset, batch_size=args.batch_size, shuffle=True, num_workers=2)
+    
+train_sampler = init_sampler(trainset.targets, 'train', len(trainset))
+trainloader = torch.utils.data.DataLoader(trainset, batch_sampler=train_sampler)
+# trainloader = torch.utils.data.DataLoader(
+#     trainset, batch_size=args.batch_size, shuffle=True, num_workers=2)
 
 testset = torchvision.datasets.CIFAR10(
     root='./data', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(
-    testset, batch_size=100, shuffle=False, num_workers=2)
+
+test_sampler = init_sampler(testset.targets, 'val', len(testset))
+testloader = torch.utils.data.DataLoader(testset, batch_sampler=test_sampler)
+# testloader = torch.utils.data.DataLoader(
+    # testset, batch_size=100, shuffle=False, num_workers=2)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -99,6 +123,11 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
+    if epoch < 4:
+        args.loss = 'CE'
+    else:
+        args.loss = 'PRO'
+        
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
