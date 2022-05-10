@@ -23,8 +23,8 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument("--loss", required=False, default='PRO', choices=['CE', 'PRO'])
-parser.add_argument('--n_support', default=16, type=int, help='learning rate')
-parser.add_argument('--n_query', default=16, type=int, help='learning rate')
+parser.add_argument('--n_support', default=32, type=int, help='learning rate')
+parser.add_argument('--n_query', default=32, type=int, help='learning rate')
 parser.add_argument('--batch_size', default=256, type=int, help='learning rate')
 parser.add_argument('--classes', default=10, type=int, help='learning rate')
 args = parser.parse_args()
@@ -62,7 +62,7 @@ transform_test = transforms.Compose([
 
 trainset = torchvision.datasets.CIFAR10(
     root='./data', train=True, download=True, transform=transform_train)
-    
+
 train_sampler = init_sampler(trainset.targets, 'train', len(trainset))
 trainloader = torch.utils.data.DataLoader(trainset, batch_sampler=train_sampler)
 # trainloader = torch.utils.data.DataLoader(
@@ -123,10 +123,10 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
-    if epoch < 4:
-        args.loss = 'CE'
-    else:
-        args.loss = 'PRO'
+    # if epoch < 4:
+    #     args.loss = 'CE'
+    # else:
+    #     args.loss = 'PRO'
         
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
