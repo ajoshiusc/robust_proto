@@ -78,13 +78,11 @@ def prototypical_loss(inputs, target, n_support):
     # target_inds = torch.arange(0, n_classes)
     # target_inds = target_inds.view(n_classes, 1, 1)
     # target_inds = target_inds.expand(n_classes, n_query, 1).long()
-    target_inds = torch.zeros(sum(n_query_of_cls), n_classes, dtype=torch.int64)
+    target_inds = torch.zeros(sum(n_query_of_cls), 1, dtype=torch.int64)
     for i, n in enumerate(n_query_of_cls):
         curr_i = sum(n_query_of_cls[:i])
         target_inds[curr_i:curr_i+n] = i
-        
     loss_val = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
-    
     # print(dists, loss_val)
     _, y_hat = log_p_y.max(1)
     # pdb.set_trace()
