@@ -16,22 +16,24 @@ from models import *
 from utils import progress_bar
 from prototypical_loss import prototypical_loss as loss_fn
 from prototypical_batch_sampler import PrototypicalBatchSampler
-
+from datasets.cifar10 import IMBALANCECIFAR10, CIFAR10_LT
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument("--loss", required=False, default='PRO', choices=['CE', 'PRO'])
-parser.add_argument('--n_support', default=32, type=int, help='learning rate')
-parser.add_argument('--n_query', default=32, type=int, help='learning rate')
-parser.add_argument('--batch_size', default=256, type=int, help='learning rate')
-parser.add_argument('--classes', default=10, type=int, help='learning rate')
+parser.add_argument('--n_support', default=24, type=int, help='number of support samples')
+parser.add_argument('--n_query', default=24, type=int, help='number of query samples in each batch')
+parser.add_argument('--batch_size', default=480, type=int, help='batch size')
+parser.add_argument('--classes', default=10, type=int, help='number of classes')
+parser.add_argument('--epochs', default=50, type=int, help='number of training epochs')
+parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
-start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+start_epoch = args.start_epoch  # start from epoch 0 or last checkpoint epoch
 
 def init_sampler(labels, mode, total_len):
     if 'train' in mode:
@@ -60,21 +62,25 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-trainset = torchvision.datasets.CIFAR10(
-    root='./data', train=True, download=True, transform=transform_train)
+# trainset = torchvision.datasets.CIFAR10(
+#     root='./data', train=True, download=True, transform=transform_train)
+# trainset = IMBALANCECIFAR10(root='./data', imb_type='exp', imb_factor=0.01, rand_number=0, train=True, download=True, transform=transform_train)
 
-train_sampler = init_sampler(trainset.targets, 'train', len(trainset))
-trainloader = torch.utils.data.DataLoader(trainset, batch_sampler=train_sampler)
+LT_dataset = CIFAR10_LT(distributed=False, root='./data', imb_type='exp', imb_factor=0.01, batch_size=args.batch_size, num_works=2)
+trainloader = LT_dataset.train_balance
+# train_sampler = init_sampler(trainset.targets, 'train', len(trainset))
+# trainloader = torch.utils.data.DataLoader(trainset, batch_sampler=train_sampler)
 # trainloader = torch.utils.data.DataLoader(
 #     trainset, batch_size=args.batch_size, shuffle=True, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(
-    root='./data', train=False, download=True, transform=transform_test)
+# testset = torchvision.datasets.CIFAR10(
+#     root='./data', train=False, download=True, transform=transform_test)
 
-test_sampler = init_sampler(testset.targets, 'val', len(testset))
-testloader = torch.utils.data.DataLoader(testset, batch_sampler=test_sampler)
+# test_sampler = init_sampler(testset.targets, 'val', len(testset))
+# testloader = torch.utils.data.DataLoader(testset, batch_sampler=test_sampler)
 # testloader = torch.utils.data.DataLoader(
-    # testset, batch_size=100, shuffle=False, num_workers=2)
+#     testset, batch_size=100, shuffle=False, num_workers=2)
+testloader = LT_dataset.eval
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
@@ -130,6 +136,9 @@ def train(epoch):
         
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
+        ##==========
+        args.n_support = inputs.shape[0] // 20
+        ##==========
         optimizer.zero_grad()
         outputs = net(inputs)
         if args.loss=='CE':
@@ -190,7 +199,7 @@ def test(epoch):
         best_acc = acc
 
 
-for epoch in range(start_epoch, start_epoch+200):
+for epoch in range(start_epoch, start_epoch + args.epochs):
     train(epoch)
     test(epoch)
     scheduler.step()

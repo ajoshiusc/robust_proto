@@ -5,6 +5,7 @@ import torch
 import torchvision
 from torchvision import transforms
 import torchvision.datasets
+import pdb
 
 class IMBALANCECIFAR10(torchvision.datasets.CIFAR10):
     cls_num = 10
@@ -70,18 +71,18 @@ class CIFAR10_LT(object):
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-
         
         eval_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
         
-        
         train_dataset = IMBALANCECIFAR10(root=root, imb_type=imb_type, imb_factor=imb_factor, rand_number=0, train=True, download=True, transform=train_transform)
         eval_dataset = torchvision.datasets.CIFAR10(root=root, train=False, download=True, transform=eval_transform)
         
         self.cls_num_list = train_dataset.get_cls_num_list()
+        # print(self.cls_num_list)
+        # pdb.set_trace()
 
         self.dist_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset) if distributed else None
         self.train_instance = torch.utils.data.DataLoader(
