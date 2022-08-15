@@ -27,7 +27,7 @@ parser.add_argument('--n_support', default=24, type=int, help='number of support
 parser.add_argument('--n_query', default=24, type=int, help='number of query samples in each batch')
 parser.add_argument('--batch_size', default=480, type=int, help='batch size')
 parser.add_argument('--classes', default=10, type=int, help='number of classes')
-parser.add_argument('--epochs', default=50, type=int, help='number of training epochs')
+parser.add_argument('--epochs', default=80, type=int, help='number of training epochs')
 parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
 args = parser.parse_args()
 
@@ -66,7 +66,7 @@ transform_test = transforms.Compose([
 #     root='./data', train=True, download=True, transform=transform_train)
 # trainset = IMBALANCECIFAR10(root='./data', imb_type='exp', imb_factor=0.01, rand_number=0, train=True, download=True, transform=transform_train)
 
-LT_dataset = CIFAR10_LT(distributed=False, root='./data', imb_type='exp', imb_factor=0.01, batch_size=args.batch_size, num_works=2)
+LT_dataset = CIFAR10_LT(distributed=False, root='./data', imb_type='exp', imb_factor=0.1, batch_size=args.batch_size, num_works=2)
 trainloader = LT_dataset.train_balance
 # train_sampler = init_sampler(trainset.targets, 'train', len(trainset))
 # trainloader = torch.utils.data.DataLoader(trainset, batch_sampler=train_sampler)
@@ -129,7 +129,8 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
-    # if epoch < 4:
+    ##==================WarmUp====================
+    # if epoch < 10:
     #     args.loss = 'CE'
     # else:
     #     args.loss = 'PRO'
@@ -183,7 +184,7 @@ def test(epoch):
 
             progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
                          % (test_loss/(batch_idx+1), acc_test))
-
+            
     # Save checkpoint.
     acc = acc_test
     if acc > best_acc:
@@ -198,6 +199,7 @@ def test(epoch):
         torch.save(state, './checkpoint/ckpt.pth')
         best_acc = acc
 
+    print("Best test accuracy: %.3f" % best_acc)
 
 for epoch in range(start_epoch, start_epoch + args.epochs):
     train(epoch)
