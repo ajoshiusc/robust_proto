@@ -72,9 +72,10 @@ def prototypical_loss(inputs, target, n_support, tau):
 
     support_idxs = list(map(supp_idxs, classes))
 
-    prototypes = F.normalize(torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs]), dim=1)
+    prototypes = F.normalize(torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs]), dim=1) #normalization across different class prototypes, the shape is 10x10, first 10 is class prototypes, second 10 is there feature vector dimension.
     # FIXME when torch will support where as np
-
+    
+    # need normalization
     query_idxs = torch.cat(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1), classes)))
     #.view(-1)
     n_query_of_cls = list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1).size()[0], classes))
@@ -99,6 +100,6 @@ def prototypical_loss(inputs, target, n_support, tau):
     # pdb.set_trace()
     _, y_hat = log_p_y.max(1)
     # pdb.set_trace()
-    acc_val = y_hat.eq(target_inds[:, 0]).float().mean()
+    acc_val = y_hat.eq(target_inds[:, 0]).reshape((10, -1)).float().mean(axis=1)
     
     return loss_val, acc_val#, y_hat

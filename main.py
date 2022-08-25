@@ -17,6 +17,7 @@ from models import *
 from prototypical_loss import prototypical_loss as loss_fn
 from prototypical_batch_sampler import PrototypicalBatchSampler
 from datasets.cifar10 import IMBALANCECIFAR10, CIFAR10_LT
+import numpy as np
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -124,6 +125,14 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 
+def calc_cls_acc(predicted, targets):
+    acc_cls = []
+    for i in range(args.classes):
+        corrects = predicted[targets.eq(i).nonzero()[args.n_support:]] == i
+        acc_cls.append(corrects.float().mean().item())
+    return np.array(acc_cls)
+
+
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
@@ -148,16 +157,19 @@ def train(epoch):
             loss = criterion(outputs, targets)
             _, predicted = outputs.max(1)
             total += targets.size(0)
+            acc = calc_cls_acc(predicted, targets)
             correct += predicted.eq(targets).sum().item()
-            acc = 1.0 * correct / total
+            acc_mean = np.mean(acc)
+            
         else:
             loss, acc = loss_fn(outputs, targets, args.n_support, args.tau)
             loss = loss.to(device)
+            acc_mean = acc.mean()
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
-        print("Loss: %.3f, ACC: %.3f" % (train_loss/(batch_idx+1), acc.item()))
+        print("Loss: %.3f, ACC: %.3f" % (train_loss/(batch_idx+1), acc_mean.item()))
         # progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f'
         #              % (train_loss/(batch_idx+1), acc))
 
@@ -176,20 +188,29 @@ def test(epoch):
                 loss = criterion(outputs, targets)
                 _, predicted = outputs.max(1)
                 total += targets.size(0)
+
+                acc_test = calc_cls_acc(predicted, targets)
+
                 correct += predicted.eq(targets).sum().item()
-                acc_test = 1.0 * correct/total
+                # acc_test_mean = 1.0 * correct/total
+                acc_test_mean = np.mean(acc_test)
             else:
                 loss, acc_test = loss_fn(outputs, targets, args.n_support, args.tau)
+                acc_test_mean = acc_test.mean()
                 # loss = loss.to(device)
             test_loss += loss.item()
             #_, predicted = outputs.max(1)
 
             # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
+            #              % (test_loss/(batch_idx+1), acc_test_mean))
+            print("Accuracy per class", acc_test)
+            # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
             #              % (test_loss/(batch_idx+1), acc_test))
-            print("Loss: %.3f, ACC: %.3f" % (test_loss/(batch_idx+1), acc_test.item()))
+            print("Loss: %.3f, ACC: %.3f" % (test_loss/(batch_idx+1), acc_test_mean.item()))
+            
             
     # Save checkpoint.
-    acc = acc_test
+    acc = acc_test.mean()
     if acc > best_acc:
         print('Saving..')
         state = {
