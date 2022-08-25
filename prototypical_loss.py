@@ -66,9 +66,10 @@ def prototypical_loss(inputs, target, n_support):
 
     support_idxs = list(map(supp_idxs, classes))
 
-    prototypes = torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs])
+    prototypes = F.normalize(torch.stack([input_cpu[idx_list].mean(0) for idx_list in support_idxs]), dim=1) #normalization across different class prototypes, the shape is 10x10, first 10 is class prototypes, second 10 is there feature vector dimension.
     # FIXME when torch will support where as np
-
+    
+    # need normalization
     query_idxs = torch.cat(list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1), classes)))
     #.view(-1)
     n_query_of_cls = list(map(lambda c: target_cpu.eq(c).nonzero()[n_support:].squeeze(1).size()[0], classes))
@@ -82,12 +83,13 @@ def prototypical_loss(inputs, target, n_support):
     for i, n in enumerate(n_query_of_cls):
         curr_i = sum(n_query_of_cls[:i])
         target_inds[curr_i:curr_i+n] = i
+
     loss_val = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
     # if log_p_y.size()[0] == 0:
     # print(log_p_y)
     # pdb.set_trace()
     _, y_hat = log_p_y.max(1)
     # pdb.set_trace()
-    acc_val = y_hat.eq(target_inds[:, 0]).float().mean()
+    acc_val = y_hat.eq(target_inds[:, 0]).reshape((10, -1)).float().mean(axis=1)
     
     return loss_val, acc_val#, y_hat
