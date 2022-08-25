@@ -29,6 +29,8 @@ parser.add_argument('--batch_size', default=480, type=int, help='batch size')
 parser.add_argument('--classes', default=10, type=int, help='number of classes')
 parser.add_argument('--epochs', default=80, type=int, help='number of training epochs')
 parser.add_argument('--start_epoch', default=0, type=int, help='start epoch')
+
+parser.add_argument('--tau', default=0.1, type=int, help='start epoch')
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -149,13 +151,13 @@ def train(epoch):
             correct += predicted.eq(targets).sum().item()
             acc = 1.0 * correct / total
         else:
-            loss, acc = loss_fn(outputs, targets, args.n_support)
+            loss, acc = loss_fn(outputs, targets, args.n_support, args.tau)
             loss = loss.to(device)
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
-        print(acc)
+        print("Loss: %.3f, ACC: %.3f" % (train_loss/(batch_idx+1), acc.item()))
         # progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f'
         #              % (train_loss/(batch_idx+1), acc))
 
@@ -177,14 +179,14 @@ def test(epoch):
                 correct += predicted.eq(targets).sum().item()
                 acc_test = 1.0 * correct/total
             else:
-                loss, acc_test = loss_fn(outputs, targets, args.n_support)
+                loss, acc_test = loss_fn(outputs, targets, args.n_support, args.tau)
                 # loss = loss.to(device)
             test_loss += loss.item()
             #_, predicted = outputs.max(1)
 
             # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
             #              % (test_loss/(batch_idx+1), acc_test))
-            print(acc)
+            print("Loss: %.3f, ACC: %.3f" % (test_loss/(batch_idx+1), acc_test.item()))
             
     # Save checkpoint.
     acc = acc_test

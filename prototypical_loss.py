@@ -41,7 +41,7 @@ def contrastive_loss(X, tau):
 
     return loss
 
-def prototypical_loss(inputs, target, n_support):
+def prototypical_loss(inputs, target, n_support, tau):
     '''
     Inspired by https://github.com/jakesnell/prototypical-networks/blob/master/protonets/models/few_shot.py
     Compute the barycentres by averaging the features of n_support
@@ -89,9 +89,11 @@ def prototypical_loss(inputs, target, n_support):
         curr_i = sum(n_query_of_cls[:i])
         target_inds[curr_i:curr_i+n] = i
     loss_proto = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
-    # loss_con = contrastive_loss(input_cpu, tau)
-    # loss_val = loss_ce + lamda2 * loss_proto + lamda1 * loss_conn
-    loss_val = loss_proto
+
+    loss_con = contrastive_loss(inputs.to('cpu'), tau=1)
+    # loss_val = loss_ce + lamda2 * loss_proto + lamda1 * loss_con
+    print(loss_proto, loss_con)
+    loss_val = loss_proto + 0.2 * loss_con
     # if log_p_y.size()[0] == 0:
     # print(log_p_y)
     # pdb.set_trace()
