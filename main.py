@@ -13,7 +13,7 @@ import argparse
 import pdb
 
 from models import *
-from utils import progress_bar
+# from utils import progress_bar
 from prototypical_loss import prototypical_loss as loss_fn
 from prototypical_batch_sampler import PrototypicalBatchSampler
 from datasets.cifar10 import IMBALANCECIFAR10, CIFAR10_LT
@@ -167,10 +167,9 @@ def train(epoch):
         optimizer.step()
 
         train_loss += loss.item()
-
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f'
-                     % (train_loss/(batch_idx+1), acc_mean))
-        # print(acc)
+        print(acc_mean)
+        # progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f'
+        #              % (train_loss/(batch_idx+1), acc))
 
 
 def test(epoch):
@@ -200,9 +199,12 @@ def test(epoch):
             test_loss += loss.item()
             #_, predicted = outputs.max(1)
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
-                         % (test_loss/(batch_idx+1), acc_test_mean))
+            # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
+            #              % (test_loss/(batch_idx+1), acc_test_mean))
             print("Accuracy per class", acc_test)
+            # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f'
+            #              % (test_loss/(batch_idx+1), acc_test))
+            print(acc_test_mean)
             
     # Save checkpoint.
     acc = acc_test.mean()

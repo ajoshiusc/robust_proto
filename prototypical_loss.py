@@ -34,6 +34,12 @@ def euclidean_dist(x, y):
 
     return torch.pow(x - y, 2).sum(2)
 
+def contrastive_loss(X, tau):
+    #X: B x 10
+    nume = torch.exp(torch.diagonal(torch.matmul(X, X.T/tau), 0))
+    loss = -torch.log(nume / torch.sum(torch.exp(torch.matmul(X, X.T/tau)), dim=1)).mean()
+
+    return loss
 
 def prototypical_loss(inputs, target, n_support):
     '''
@@ -83,8 +89,10 @@ def prototypical_loss(inputs, target, n_support):
     for i, n in enumerate(n_query_of_cls):
         curr_i = sum(n_query_of_cls[:i])
         target_inds[curr_i:curr_i+n] = i
-
-    loss_val = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
+    loss_proto = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
+    # loss_con = contrastive_loss(input_cpu, tau)
+    # loss_val = loss_ce + lamda2 * loss_proto + lamda1 * loss_conn
+    loss_val = loss_proto
     # if log_p_y.size()[0] == 0:
     # print(log_p_y)
     # pdb.set_trace()
