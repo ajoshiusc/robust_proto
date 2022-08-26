@@ -38,7 +38,7 @@ def contrastive_loss(X, tau):
     #X: B x 10
     nume = torch.exp(torch.diagonal(torch.matmul(X, X.T/tau), 0))
     loss = -torch.log(nume / torch.sum(torch.exp(torch.matmul(X, X.T/tau)), dim=1)).mean()
-
+    # pdb.set_trace()
     return loss
 
 def prototypical_loss(inputs, target, n_support, tau):
@@ -91,15 +91,14 @@ def prototypical_loss(inputs, target, n_support, tau):
         target_inds[curr_i:curr_i+n] = i
     loss_proto = -log_p_y.gather(dim=1, index=target_inds).squeeze().view(-1).mean()
 
-    loss_con = contrastive_loss(inputs.to('cpu'), tau=1)
+    loss_con = contrastive_loss(inputs.to('cpu'), tau=1000)
     # loss_val = loss_ce + lamda2 * loss_proto + lamda1 * loss_con
-    print(loss_proto, loss_con)
+    # print(loss_proto, loss_con)
     loss_val = loss_proto + 0.2 * loss_con
     # if log_p_y.size()[0] == 0:
     # print(log_p_y)
     # pdb.set_trace()
     _, y_hat = log_p_y.max(1)
-    # pdb.set_trace()
     acc_val = y_hat.eq(target_inds[:, 0]).reshape((10, -1)).float().mean(axis=1)
     
     return loss_val, acc_val#, y_hat
